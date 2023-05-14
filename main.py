@@ -7,6 +7,7 @@ instr_list = ['ap', 'ar', 'qv', 'qci', 'qbs', 'qts', 'mr', 'qcs', 'qba', 'ag', '
 group_list = set()
 group_id_list = set()
 message_id_list = set()
+emoji_id_list = set()
 G = nx.Graph()
 min_id = 0
 max_id = 10000
@@ -45,12 +46,12 @@ def get_related_person_id():
 
 
 def get_unRelated_person_id():
-    related_id1 = get_exist_id()
-    related_id2 = get_exist_id()
-    while G.has_edge(related_id1, related_id2) or related_id1 == related_id2:
-        related_id1 = get_exist_id()
-        related_id2 = get_exist_id()
-    return related_id1, related_id2
+    unrelated_id1 = get_exist_id()
+    unrelated_id2 = get_exist_id()
+    while G.has_edge(unrelated_id1, unrelated_id2) or unrelated_id1 == unrelated_id2:
+        unrelated_id1 = get_exist_id()
+        unrelated_id2 = get_exist_id()
+    return unrelated_id1, unrelated_id2
 
 
 def get_age():
@@ -85,10 +86,10 @@ def add_person():
 def add_relation():
     prob = random.uniform(0, 1)
     value = get_value()
-    if prob < 0.95 and G.number_of_nodes() >= 2 and G.number_of_edges() <= G.number_of_nodes() * (
-            G.number_of_nodes() - 1) / 2:
+    if prob < 0.95 and G.number_of_nodes() >= 2 and G.number_of_edges() < \
+            G.number_of_nodes() * (G.number_of_nodes() - 1) / 2:
         add_relation_id1, add_relation_id2 = get_unRelated_person_id()
-        G.add_edge(add_relation_id2, add_relation_id2, value=value)
+        G.add_edge(add_relation_id1, add_relation_id2, value=value)
     elif 0.95 <= prob < 0.96 and G.number_of_nodes() >= 2 and G.number_of_edges() >= 1:
         add_relation_id1, add_relation_id2 = get_related_person_id()
     elif 0.96 <= prob < 0.97 and G.number_of_nodes() >= 1:
@@ -108,7 +109,7 @@ def query_value():
     prob = random.uniform(0, 1)
     if prob < 0.95 and G.number_of_nodes() >= 2 and G.number_of_edges() >= 1:
         query_value_id1, query_value_id2 = get_related_person_id()
-    elif 0.95 <= prob < 0.97 and G.number_of_nodes() >= 2 and G.number_of_edges() <= G.number_of_nodes() * (
+    elif 0.95 <= prob < 0.97 and G.number_of_nodes() >= 2 and G.number_of_edges() < G.number_of_nodes() * (
             G.number_of_nodes() - 1) / 2:
         query_value_id1, query_value_id2 = get_unRelated_person_id()
     elif 0.97 <= prob < 0.98 and G.number_of_nodes() >= 1:
@@ -304,11 +305,11 @@ def add_message():
 def send_message():
     prob = random.uniform(0, 1)
     if prob < 0.99 and len(message_id_list) > 0:
-        send_message_id = random.choice(list(group_id_list))
+        send_message_id = random.choice(list(message_id_list))
         # need to improve and add remove message action
     else:
         send_message_id = random.randint(min_id, max_id)
-        while send_message_id in group_id_list:
+        while send_message_id in message_id_list:
             send_message_id = random.randint(min_id, max_id)
     return "sm " + str(send_message_id)
 
@@ -329,6 +330,194 @@ def query_received_messages():
     else:
         query_received_messages_id = get_unExist_id()
     return "qrm " + str(query_received_messages_id)
+
+
+def add_red_envelope_message():
+    prob = random.uniform(0, 1)
+    money = random.randint(0, 200)
+    if prob < 0.01 and len(message_id_list) > 0:
+        add_message_id = random.choice(list(message_id_list))
+        add_message_type = random.randint(0, 1)
+        add_message_person_id1 = random.randint(min_id, max_id)
+        add_message_person_id2 = random.randint(min_id, max_id)
+        add_message_group_id = random.randint(min_id, max_id)
+    elif 0.01 <= prob < 0.02 and G.number_of_nodes() >= 1:
+        add_message_id = random.randint(min_id, max_id)
+        while add_message_id in message_id_list:
+            add_message_id = random.randint(min_id, max_id)
+        add_message_type = 0
+        add_message_person_id1 = get_exist_id()
+        add_message_person_id2 = add_message_person_id1
+        add_message_group_id = random.randint(min_id, max_id)
+    elif G.number_of_nodes() >= 2 and len(group_id_list) >= 1:
+        add_message_id = random.randint(min_id, max_id)
+        while add_message_id in message_id_list:
+            add_message_id = random.randint(min_id, max_id)
+        add_message_type = random.randint(0, 1)
+        add_message_person_id1 = get_exist_id()
+        add_message_person_id2 = get_exist_id()
+        while add_message_person_id2 == add_message_person_id1:
+            add_message_person_id2 = get_exist_id()
+        add_message_group_id = random.choice(list(group_id_list))
+        message_id_list.add(add_message_id)
+    else:
+        return ""
+    if add_message_type == 0:
+        return "arem " + str(add_message_id) + " " + str(money) + " 0 " + str(
+            add_message_person_id1) + " " + str(add_message_person_id2)
+    elif add_message_type == 1:
+        return "arem " + str(add_message_id) + " " + str(money) + " 1 " + str(
+            add_message_person_id1) + " " + str(add_message_group_id)
+    else:
+        return ""
+
+
+def add_notice_message():
+    prob = random.uniform(0, 1)
+    string = ""
+    base_str = "ABCDEFGHIGKLMNOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz0123456789"
+    length = random.randint(1, 10)
+    for j in range(length):
+        string += base_str[random.randint(0, len(base_str) - 1)]
+    if prob < 0.01 and len(message_id_list) > 0:
+        add_message_id = random.choice(list(message_id_list))
+        add_message_type = random.randint(0, 1)
+        add_message_person_id1 = random.randint(min_id, max_id)
+        add_message_person_id2 = random.randint(min_id, max_id)
+        add_message_group_id = random.randint(min_id, max_id)
+    elif 0.01 <= prob < 0.02 and G.number_of_nodes() >= 1:
+        add_message_id = random.randint(min_id, max_id)
+        while add_message_id in message_id_list:
+            add_message_id = random.randint(min_id, max_id)
+        add_message_type = 0
+        add_message_person_id1 = get_exist_id()
+        add_message_person_id2 = add_message_person_id1
+        add_message_group_id = random.randint(min_id, max_id)
+    elif G.number_of_nodes() >= 2 and len(group_id_list) >= 1:
+        add_message_id = random.randint(min_id, max_id)
+        while add_message_id in message_id_list:
+            add_message_id = random.randint(min_id, max_id)
+        add_message_type = random.randint(0, 1)
+        add_message_person_id1 = get_exist_id()
+        add_message_person_id2 = get_exist_id()
+        while add_message_person_id2 == add_message_person_id1:
+            add_message_person_id2 = get_exist_id()
+        add_message_group_id = random.choice(list(group_id_list))
+        message_id_list.add(add_message_id)
+    else:
+        return ""
+    if add_message_type == 0:
+        return "anm " + str(add_message_id) + " " + string + " 0 " + str(
+            add_message_person_id1) + " " + str(add_message_person_id2)
+    elif add_message_type == 1:
+        return "anm " + str(add_message_id) + " " + string + " 1 " + str(
+            add_message_person_id1) + " " + str(add_message_group_id)
+    else:
+        return ""
+
+
+def clear_notices():
+    prob = random.uniform(0, 1)
+    if prob < 0.99 and G.number_of_nodes() > 0:
+        person_id = get_exist_id()
+    else:
+        person_id = get_unExist_id()
+    return "cn " + str(person_id)
+
+
+def add_emoji_message():
+    prob = random.uniform(0, 1)
+    sub_prob = random.uniform(0, 1)
+    if sub_prob < 0.99 and len(emoji_id_list) > 0:
+        emoji_id = random.choice(list(emoji_id_list))
+    else:
+        emoji_id = random.randint(0, 10000)
+        while emoji_id in emoji_id_list:
+            emoji_id = random.randint(0, 10000)
+
+    if prob < 0.01 and len(message_id_list) > 0:
+        add_message_id = random.choice(list(message_id_list))
+        add_message_type = random.randint(0, 1)
+        add_message_person_id1 = random.randint(min_id, max_id)
+        add_message_person_id2 = random.randint(min_id, max_id)
+        add_message_group_id = random.randint(min_id, max_id)
+    elif 0.01 <= prob < 0.02 and G.number_of_nodes() >= 1:
+        add_message_id = random.randint(min_id, max_id)
+        while add_message_id in message_id_list:
+            add_message_id = random.randint(min_id, max_id)
+        add_message_type = 0
+        add_message_person_id1 = get_exist_id()
+        add_message_person_id2 = add_message_person_id1
+        add_message_group_id = random.randint(min_id, max_id)
+    elif G.number_of_nodes() >= 2 and len(group_id_list) >= 1:
+        add_message_id = random.randint(min_id, max_id)
+        while add_message_id in message_id_list:
+            add_message_id = random.randint(min_id, max_id)
+        add_message_type = random.randint(0, 1)
+        add_message_person_id1 = get_exist_id()
+        add_message_person_id2 = get_exist_id()
+        while add_message_person_id2 == add_message_person_id1:
+            add_message_person_id2 = get_exist_id()
+        add_message_group_id = random.choice(list(group_id_list))
+        message_id_list.add(add_message_id)
+    else:
+        return ""
+    if add_message_type == 0:
+        return "aem " + str(add_message_id) + " " + str(emoji_id) + " 0 " + str(
+            add_message_person_id1) + " " + str(add_message_person_id2)
+    elif add_message_type == 1:
+        return "aem " + str(add_message_id) + " " + str(emoji_id) + " 1 " + str(
+            add_message_person_id1) + " " + str(add_message_group_id)
+    else:
+        return ""
+
+
+def store_emoji_id():
+    prob = random.uniform(0, 1)
+
+    if prob < 0.01 and len(emoji_id_list) > 0:
+        emoji_id = random.choice(list(emoji_id_list))
+    else:
+        emoji_id = random.randint(0, 10000)
+        while emoji_id in emoji_id_list:
+            emoji_id = random.randint(0, 10000)
+        emoji_id_list.add(emoji_id)
+    return "sei " + str(emoji_id)
+
+
+def query_popularity():
+    prob = random.uniform(0, 1)
+
+    if prob < 0.99 and len(emoji_id_list) > 0:
+        emoji_id = random.choice(list(emoji_id_list))
+    else:
+        emoji_id = random.randint(0, 10000)
+        while emoji_id in emoji_id_list:
+            emoji_id = random.randint(0, 10000)
+    return "qp " + str(emoji_id)
+
+
+def delete_cold_emoji():
+    limit = random.randint(1, 1)
+    return "dce " + str(limit)
+
+
+def query_money():
+    prob = random.uniform(0, 1)
+    if prob < 0.99 and G.number_of_nodes() > 0:
+        person_id = get_exist_id()
+    else:
+        person_id = get_unExist_id()
+    return "qm " + str(person_id)
+
+
+def query_least_moment():
+    prob = random.uniform(0, 1)
+    if prob < 0.99 and G.number_of_nodes() > 0:
+        person_id = get_exist_id()
+    else:
+        person_id = get_unExist_id()
+    return "qlm " + str(person_id)
 
 
 def get_instr(instr_variety):
@@ -376,7 +565,7 @@ def test(num):
     group_id_list.clear()
     group_list.clear()
     message_id_list.clear()
-
+    emoji_id_list.clear()
     f = open("in.txt", "w")
     # message test
     '''
@@ -431,8 +620,8 @@ def test(num):
         f.write("qcs\n")
         f.write("qts\n")
         f.write("qbs\n")'''
+    '''
     # comprehensive test
-
     for k in range(200):
         f.write(add_person() + '\n')
     for k in range(1000):
@@ -441,7 +630,96 @@ def test(num):
         instr_type = random.choice(instr_list)
         instr = get_instr(instr_type)
         f.write(instr + '\n')
-
+    '''
+    # red_envelope_message test
+    '''
+    for k in range(100):
+        f.write(add_person() + '\n')
+    for k in range(5000):
+        f.write(add_relation() + '\n')
+    for k in range(10):
+        f.write(add_group() + '\n')
+    for k in range(90):
+        f.write(add_to_group() + '\n')
+    for k in range(100):
+        f.write(add_red_envelope_message() + '\n')
+    for k in range(100):
+        f.write(send_message() + '\n')
+        for m in range(100):
+            f.write(query_social_value() + '\n')
+            f.write(query_money() + '\n')
+    '''
+    # notice_message test
+    '''
+    for k in range(100):
+        f.write(add_person() + '\n')
+    for k in range(5000):
+        f.write(add_relation() + '\n')
+    for k in range(10):
+        f.write(add_group() + '\n')
+    for k in range(90):
+        f.write(add_to_group() + '\n')
+    for k in range(100):
+        f.write(add_notice_message() + '\n')
+    for k in range(100):
+        f.write(send_message() + '\n')
+        for m in range(100):
+            f.write(query_social_value() + '\n')
+    '''
+    # emoji_message test
+    '''
+    for k in range(100):
+        f.write(add_person() + '\n')
+    for k in range(5000):
+        f.write(add_relation() + '\n')
+    for k in range(10):
+        f.write(add_group() + '\n')
+    for k in range(100):
+        f.write(add_to_group() + '\n')
+    for k in range(10):
+        f.write(store_emoji_id() + '\n')
+    for k in range(100):
+        f.write(add_emoji_message() + '\n')
+    for k in range(100):
+        f.write(send_message() + '\n')
+        for m in range(100):
+            f.write(query_social_value() + '\n')
+            f.write(query_popularity() + '\n')
+    '''
+    # delete_cold_emoji test
+    '''
+    for k in range(100):
+        f.write(add_person() + '\n')
+    for k in range(2000):
+        f.write(add_relation() + '\n')
+    for k in range(10):
+        f.write(add_group() + '\n')
+    for k in range(100):
+        f.write(add_to_group() + '\n')
+    for k in range(10):
+        f.write(store_emoji_id() + '\n')
+    for k in range(100):
+        f.write(add_emoji_message() + '\n')
+    for k in range(100):
+        f.write(add_notice_message() + '\n')
+    for k in range(100):
+        f.write(add_red_envelope_message() + '\n')
+    for k in range(100):
+        f.write(send_message() + '\n')
+    f.write(delete_cold_emoji() + '\n')
+    for k in range(100):
+        f.write(send_message() + '\n')
+        for m in range(100):
+            f.write(query_social_value() + '\n')
+            f.write(query_popularity() + '\n')
+    '''
+    # query_least_moment test
+    for k in range(100):
+        f.write(add_person() + '\n')
+    for k in range(200):
+        f.write(add_relation() + '\n')
+    for k in list(G.nodes):
+        f.write('qlm ' + str(k) + ' \n')
     f.close()
     return cmp.cmp()
 
@@ -463,5 +741,5 @@ def test_generate_data():
 
 
 if __name__ == '__main__':
-    test_known_data()
-    # test_generate_data()
+    # test_known_data()
+    test_generate_data()
